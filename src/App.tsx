@@ -13,13 +13,7 @@ import SignIn from "./components/SignIn";
 import MainPage from "./components/mainPage/MainPage";
 
 const fbapp = initializeApp({
-  apiKey: "AIzaSyDzx5d6E3bmaDjTMCY3fp2QbgZE2mVTonA",
-  authDomain: "aichat-mgsi.firebaseapp.com",
-  projectId: "aichat-mgsi",
-  storageBucket: "aichat-mgsi.appspot.com",
-  messagingSenderId: "237460704885",
-  appId: "1:237460704885:web:8a45cdd2dd3056ea69723c",
-  measurementId: "G-6QWCM88KBQ",
+  // DB auth tokens
 });
 
 const auth = getAuth(fbapp);
