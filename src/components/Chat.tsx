@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import SignOut from "./SignOut";
 import { useCollectionData } from "react-firebase-hooks/firestore";
 import {
   collection,
@@ -8,6 +7,9 @@ import {
   query,
   addDoc,
   serverTimestamp,
+  doc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
 
 import { useAppSelector } from "../hook";
@@ -22,25 +24,29 @@ interface MessageProps {
 
 interface ChatProps {
   character?: string;
-  auth: any;
-  firestore: any;
-  user_uid: string;
 }
 
-const Chat: React.FC<ChatProps> = ({
-  character,
-  auth,
-  firestore,
-  user_uid,
-}) => {
-  const currentChat = useAppSelector((state) => state.chats.openChat);
+const Chat: React.FC<ChatProps> = ({ character }) => {
   const [input, setInput] = useState<string>("");
+
+  const currentChat = useAppSelector((state) => state.chats.openChat);
+  const allChats = useAppSelector((state) => state.chats.allChats);
+
+  const firestore = useAppSelector(
+    (state) => state.firestoreSlice.firestoreInstance
+  );
+
+  const user = useAppSelector((state) => state.firestoreSlice.user);
+
+  const auth = useAppSelector((state) => state.firestoreSlice.auth);
 
   const messagesRef = collection(
     firestore,
     "users",
-    `${user_uid}`,
-    `${currentChat}`
+    `${user.uid}`,
+    "chats",
+    `${currentChat}`,
+    "messages"
   );
   const q = query(messagesRef, orderBy("createdAt"), limit(25));
 
@@ -51,11 +57,47 @@ const Chat: React.FC<ChatProps> = ({
 
     const { uid, photoURL } = auth.currentUser;
 
+    const chatRef = doc(firestore, "users", user.uid, "chats", currentChat);
+
+    const chatDoc = await getDoc(chatRef);
+
+    if (!chatDoc.exists()) {
+      const selectedNewChat = allChats.find((chat) => chat.id === currentChat);
+      await setDoc(chatRef, {
+        ...selectedNewChat,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    let chatInfo = allChats.find((chat) => chat.id === currentChat);
+
     await addDoc(messagesRef, {
+      sender: "user",
       text: input,
       createdAt: serverTimestamp(),
       uid,
       photoURL,
+    });
+
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
+      {
+        headers: {
+          Authorization: "Bearer TOKEN",
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: JSON.stringify({ inputs: input }),
+      }
+    );
+    const result = await response.json();
+
+    await addDoc(messagesRef, {
+      sender: "bot",
+      text: result[0].generated_text,
+      createdAt: serverTimestamp(),
+      uid,
+      photoURL: chatInfo?.chatPhotoURL,
     });
 
     setInput("");
@@ -68,7 +110,7 @@ const Chat: React.FC<ChatProps> = ({
 
     return (
       <div className={`message ${messageClass}`}>
-        <img src={photo.toString()} width={30} />
+        <img src={photo} width={30} />
         <p>{text}</p>
       </div>
     );
@@ -98,9 +140,6 @@ const Chat: React.FC<ChatProps> = ({
 
           <button type="submit">Отправить</button>
         </form>
-      </div>
-      <div>
-        <SignOut auth={auth} />
       </div>
     </div>
   );

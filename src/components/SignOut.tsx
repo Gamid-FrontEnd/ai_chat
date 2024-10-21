@@ -1,7 +1,10 @@
 import React from "react";
-import { signOut, Auth } from "firebase/auth";
+import { signOut } from "firebase/auth";
+import { useAppSelector } from "../hook";
 
-const SignOut: React.FC<{ auth: Auth }> = ({ auth }) => {
+const SignOut: React.FC = () => {
+  const auth = useAppSelector((state) => state.firestoreSlice.auth);
+
   const handleSignOut = async () => {
     try {
       await signOut(auth);

@@ -1,78 +1,68 @@
-import React, { useEffect, useState } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Link } from "react-router-dom";
+import { useAppSelector } from "../../hook";
+
 import Chat from "../Chat";
-import { Link } from "react-router-dom";
-import { collection, onSnapshot } from "firebase/firestore";
-
-import { useAppDispatch } from "../../hook";
-import { openChat } from "../../store/chatSlice";
 import MainChatList from "./MainChatList";
+import UserChats from "../userChats/UserChats";
+import UserPage from "../userChats/UserPage";
+import CreateChat from "../createChat/CreateChat";
 
-interface MainPageProps {
-  auth: any;
-  firestore: any;
-  user_uid: string;
-}
+import {
+  AvatarStyles,
+  HeaderStyles,
+  MainPageContent,
+  NavDiv,
+  NavLink,
+} from "../../styles/MainPageStyles";
 
-const MainPage: React.FC<MainPageProps> = ({ auth, firestore, user_uid }) => {
-  const dispatch = useAppDispatch();
-  const [chats, setChats] = useState<any[]>([]);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(firestore, "all_chats"),
-      (snapshot) => {
-        const chatsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setChats(chatsData);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [firestore]);
+const MainPage: React.FC = () => {
+  const user = useAppSelector((state) => state.firestoreSlice.user);
 
   return (
     <div>
-      <div>
-        <nav>
+      <HeaderStyles>
+        <NavDiv>
           <ul>
             <li>
-              <Link to="/">Home</Link>
+              <NavLink to="/">Home</NavLink>
             </li>
             <li>
-              <Link to="/my_chats">My Chats</Link>
+              <NavLink to="/my_chats">My Chats</NavLink>
             </li>
             <li>
-              <Link to="/all_chats">All Chats</Link>
+              <NavLink to="/all_chats">All Chats</NavLink>
+            </li>
+            <li>
+              <NavLink to="/create_chat">Create</NavLink>
             </li>
           </ul>
-        </nav>
-      </div>
+        </NavDiv>
+        <AvatarStyles>
+          {user ? (
+            <Link to="/user_profile">
+              <img src={user.photoURL} />
+            </Link>
+          ) : (
+            <p>Lodaing...</p>
+          )}
+        </AvatarStyles>
+      </HeaderStyles>
 
-      <div>
-        {chats &&
-          chats.map((chat) => {
-            return (
-              <button onClick={() => dispatch(openChat(chat.id))}>
-                {chat.id}
-              </button>
-            );
-          })}
-      </div>
-
-      <div>
-        <Routes>
-          <Route
-            path="/my_chats"
-            element={
-              <Chat auth={auth} firestore={firestore} user_uid={user_uid} />
-            }
-          />
-          <Route path="/all_chats" element={<MainChatList />} />
-        </Routes>
-      </div>
+      <MainPageContent>
+        {user ? (
+          <div>
+            <Routes>
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/my_chats" element={<UserChats />} />
+              <Route path="/all_chats" element={<MainChatList />} />
+              <Route path="/user_profile" element={<UserPage />} />
+              <Route path="/create_chat" element={<CreateChat />} />
+            </Routes>
+          </div>
+        ) : (
+          <p>Loading...</p>
+        )}
+      </MainPageContent>
     </div>
   );
 };
